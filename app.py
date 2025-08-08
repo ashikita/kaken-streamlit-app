@@ -2,10 +2,19 @@ import streamlit as st
 import requests
 import xml.etree.ElementTree as ET
 
-st.title("科研費助成情報取得ツール\nJPCOARスキーマ用")
+st.title("JPCOARスキーマ科研費助成情報取得ツール")
 
-project_ids_input = st.text_area("研究課題番号を入力（改行区切り）", "JP25620017\nJP18H03901\n")
+# セッション状態で入力を保持
+if "project_ids_input" not in st.session_state:
+    st.session_state.project_ids_input = ""
 
+# 入力欄とクリアボタン
+project_ids_input = st.text_area("研究課題番号を入力（改行区切り）", st.session_state.project_ids_input)
+if st.button("クリア"):
+    st.session_state.project_ids_input = ""
+    st.experimental_rerun()
+
+# 取得ボタン
 if st.button("取得する"):
     project_ids = project_ids_input.strip().splitlines()
     appid = st.secrets["KAKEN_APPID"]
@@ -64,3 +73,4 @@ if st.button("取得する"):
 
     if all_blocks:
         st.code(all_blocks.strip(), language="xml")
+
