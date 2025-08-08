@@ -2,9 +2,9 @@ import streamlit as st
 import requests
 import xml.etree.ElementTree as ET
 
-st.title("JPCOARスキーマ用科研費助成情報取得ツール")
+st.title("JPCOARスキーマ用\n科研費助成情報取得ツール")
 
-project_ids_input = st.text_area("研究課題番号を入力（改行区切り）", "JP25620017\nJP18H03901\nJP21J12060\nJP22H00317")
+project_ids_input = st.text_area("研究課題番号を入力（改行区切り）", "JP25620017\nJP18H03901\n")
 
 if st.button("取得する"):
     project_ids = project_ids_input.strip().splitlines()
