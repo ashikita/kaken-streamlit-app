@@ -4,19 +4,26 @@ import xml.etree.ElementTree as ET
 
 st.title("JPCOARスキーマ科研費助成情報取得ツール")
 
-# セッション状態で入力を保持
+# 初期化: セッションステートに入力欄を保持
 if "project_ids_input" not in st.session_state:
     st.session_state.project_ids_input = ""
 
-# 入力欄とクリアボタン
-project_ids_input = st.text_area("研究課題番号を入力（改行区切り）", st.session_state.project_ids_input)
-if st.button("クリア"):
-    st.session_state.project_ids_input = ""
-    st.experimental_rerun()
+# 入力欄とボタン
+st.text_area("研究課題番号を入力（改行区切り）", key="project_ids_input")
 
-# 取得ボタン
-if st.button("取得する"):
-    project_ids = project_ids_input.strip().splitlines()
+col1, col2 = st.columns([1, 1])
+with col1:
+    get_button = st.button("取得する")
+with col2:
+    clear_button = st.button("クリア")
+
+# クリアボタン処理
+if clear_button:
+    st.session_state.project_ids_input = ""
+
+# 取得ボタン処理
+if get_button and st.session_state.project_ids_input.strip():
+    project_ids = st.session_state.project_ids_input.strip().splitlines()
     appid = st.secrets["KAKEN_APPID"]
 
     funder_info = """    <jpcoar:funderIdentifier funderIdentifierType="Crossref Funder" funderIdentifierTypeURI="">https://doi.org/10.13039/501100001691</jpcoar:funderIdentifier>
