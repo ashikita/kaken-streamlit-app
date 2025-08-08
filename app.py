@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 import xml.etree.ElementTree as ET
 
-st.title("科研費助成情報をJPCOARスキーマに変換")
+st.title("JPCOARスキーマ用科研費助成情報取得ツール")
 
 project_ids_input = st.text_area("研究課題番号を入力（改行区切り）", "JP25620017\nJP18H03901\nJP21J12060\nJP22H00317")
 
@@ -10,21 +10,24 @@ if st.button("取得する"):
     project_ids = project_ids_input.strip().splitlines()
     appid = st.secrets["KAKEN_APPID"]
 
-    funder_info = """    <jpcoar:funderIdentifier funderIdentifierType=\"Crossref Funder\" funderIdentifierTypeURI=\"\">https://doi.org/10.13039/501100001691</jpcoar:funderIdentifier>
-    <jpcoar:funderName xml:lang=\"en\">Japan Society for the Promotion of Science (JSPS)</jpcoar:funderName>
-    <jpcoar:funderName xml:lang=\"ja\">日本学術振興会</jpcoar:funderName>
-    <jpcoar:fundingStreamIdentifier fundingStreamIdentifierType=\"\" fundingStreamIdentifierTypeURI=\"\"></jpcoar:fundingStreamIdentifier>
-    <jpcoar:fundingStream xml:lang=\"\"></jpcoar:fundingStream>"""
+    funder_info = """    <jpcoar:funderIdentifier funderIdentifierType="Crossref Funder" funderIdentifierTypeURI="">https://doi.org/10.13039/501100001691</jpcoar:funderIdentifier>
+    <jpcoar:funderName xml:lang="en">Japan Society for the Promotion of Science (JSPS)</jpcoar:funderName>
+    <jpcoar:funderName xml:lang="ja">日本学術振興会</jpcoar:funderName>
+    <jpcoar:fundingStreamIdentifier fundingStreamIdentifierType="" fundingStreamIdentifierTypeURI=""></jpcoar:fundingStreamIdentifier>
+    <jpcoar:fundingStream xml:lang=""></jpcoar:fundingStream>"""
+
+    all_blocks = ""
 
     for raw_project_id in project_ids:
         project_id = raw_project_id.removeprefix("JP")
         award_number_type = "JGN" if raw_project_id.startswith("JP") else ""
         url = f"https://kaken.nii.ac.jp/opensearch/?appid={appid}&format=xml&qb={project_id}"
+
         try:
             response = requests.get(url)
             root = ET.fromstring(response.content)
         except Exception as e:
-            st.error(f"取得失敗: {raw_project_id} ({e})")
+            st.warning(f"取得失敗: {raw_project_id} ({e})")
             continue
 
         titles = {}
@@ -50,11 +53,14 @@ if st.button("取得する"):
 
         xml_block = f"""<jpcoar:fundingReference>
 {funder_info}
-    <jpcoar:awardNumber awardNumberType=\"{award_number_type}\" awardURI=\"{award_uri}\">{raw_project_id}</jpcoar:awardNumber>"""
+    <jpcoar:awardNumber awardNumberType="{award_number_type}" awardURI="{award_uri}">{raw_project_id}</jpcoar:awardNumber>"""
         if title_en:
             xml_block += f"\n    <jpcoar:awardTitle xml:lang=\"en\">{title_en}</jpcoar:awardTitle>"
         if title_ja:
             xml_block += f"\n    <jpcoar:awardTitle xml:lang=\"ja\">{title_ja}</jpcoar:awardTitle>"
-        xml_block += "\n</jpcoar:fundingReference>"
+        xml_block += "\n</jpcoar:fundingReference>\n"
 
-        st.code(xml_block, language="xml")
+        all_blocks += xml_block
+
+    if all_blocks:
+        st.code(all_blocks.strip(), language="xml")
