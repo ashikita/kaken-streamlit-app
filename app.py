@@ -4,17 +4,29 @@ import xml.etree.ElementTree as ET
 
 st.title("JPCOARスキーマ科研費助成情報取得ツール")
 
-project_ids_input = st.text_area("研究課題番号を入力（改行区切り）", "JP25620017\nJP18H03901\n")
+if "project_ids_input" not in st.session_state:
+    st.session_state.project_ids_input = ""
 
-if st.button("取得する"):
-    project_ids = project_ids_input.strip().splitlines()
-    appid = st.secrets["KAKEN_APPID"]
+st.text_area("研究課題番号を入力（改行区切り）", key="project_ids_input")
 
-    funder_info = """    <jpcoar:funderIdentifier funderIdentifierType="Crossref Funder" funderIdentifierTypeURI="">https://doi.org/10.13039/501100001691</jpcoar:funderIdentifier>
-    <jpcoar:funderName xml:lang="en">Japan Society for the Promotion of Science (JSPS)</jpcoar:funderName>
-    <jpcoar:funderName xml:lang="ja">日本学術振興会</jpcoar:funderName>
-    <jpcoar:fundingStreamIdentifier fundingStreamIdentifierType="" fundingStreamIdentifierTypeURI=""></jpcoar:fundingStreamIdentifier>
-    <jpcoar:fundingStream xml:lang=""></jpcoar:fundingStream>"""
+col1, col2 = st.columns([1, 1])
+with col1:
+    get_button = st.button("取得する")
+with col2:
+    clear_button = st.button("クリア")
+
+if clear_button:
+    st.session_state.project_ids_input = ""
+
+if get_button and st.session_state.project_ids_input.strip():
+    project_ids = st.session_state.project_ids_input.strip().splitlines()
+    appid = st.secrets["KAKEN_APPID"] if "KAKEN_APPID" in st.secrets else "XaVdNh6thZ1gCbDmJ0Hn"
+
+    funder_info = """    <jpcoar:funderIdentifier funderIdentifierType=\"Crossref Funder\" funderIdentifierTypeURI=\"https://www.crossref.org/services/funder-registry/\">\n        https://doi.org/10.13039/501100001691\n    </jpcoar:funderIdentifier>
+    <jpcoar:funderName xml:lang=\"en\">Japan Society for the Promotion of Science (JSPS)</jpcoar:funderName>
+    <jpcoar:funderName xml:lang=\"ja\">日本学術振興会</jpcoar:funderName>
+    <jpcoar:fundingStreamIdentifier fundingStreamIdentifierType=\"\" fundingStreamIdentifierTypeURI=\"\"></jpcoar:fundingStreamIdentifier>
+    <jpcoar:fundingStream xml:lang=\"\"></jpcoar:fundingStream>"""
 
     all_blocks = ""
 
@@ -53,7 +65,7 @@ if st.button("取得する"):
 
         xml_block = f"""<jpcoar:fundingReference>
 {funder_info}
-    <jpcoar:awardNumber awardNumberType="{award_number_type}" awardURI="{award_uri}">{raw_project_id}</jpcoar:awardNumber>"""
+    <jpcoar:awardNumber awardNumberType=\"{award_number_type}\" awardURI=\"{award_uri}\">{raw_project_id}</jpcoar:awardNumber>"""
         if title_en:
             xml_block += f"\n    <jpcoar:awardTitle xml:lang=\"en\">{title_en}</jpcoar:awardTitle>"
         if title_ja:
