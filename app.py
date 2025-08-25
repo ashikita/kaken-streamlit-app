@@ -5,21 +5,25 @@ import re
 
 st.title("JPCOARスキーマ科研費助成情報取得ツール")
 
-project_ids_input = st.text_area("研究課題番号を入力（改行またはコンマ区切り）", "", key="input_area")
+# セッションステートで入力欄を管理
+if "input_text" not in st.session_state:
+    st.session_state.input_text = ""
 
+# 入力欄とボタン
+project_ids_input = st.text_area("研究課題番号を入力（改行またはコンマ区切り）", value=st.session_state.input_text)
 col1, col2 = st.columns([1, 1])
 get_button = col1.button("取得する")
 clear_button = col2.button("クリア")
 
+# クリアボタン処理
 if clear_button:
-    st.markdown("""
-        <script>
-        const textarea = window.parent.document.querySelector('textarea');
-        if (textarea) textarea.value = "";
-        </script>
-    """, unsafe_allow_html=True)
+    st.session_state.input_text = ""
+    project_ids_input = ""
+    st.experimental_rerun()
 
+# 取得ボタン処理
 if get_button and project_ids_input.strip():
+    st.session_state.input_text = project_ids_input
     raw_input = project_ids_input
     split_pattern = r'[\n,]'
     raw_ids = re.split(split_pattern, raw_input)
@@ -81,3 +85,4 @@ if get_button and project_ids_input.strip():
 
     if all_blocks:
         st.code(all_blocks.strip(), language="xml")
+
