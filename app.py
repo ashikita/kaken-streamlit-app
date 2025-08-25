@@ -1,10 +1,81 @@
-# 入力欄とボタン
-st.text_area("研究課題番号を入力（改行またはコンマ区切り）", key="input_area")
+import streamlit as st
+import requests
+import xml.etree.ElementTree as ET
+import re
 
-col1, col2 = st.columns([1, 1])
-get_button = col1.button("取得する")
-clear_button = col2.button("クリア")
+st.title("JPCOARスキーマ科研費助成情報取得ツール")
+
+# セッションステートで入力欄を管理
+if "input_text" not in st.session_state:
+    st.session_state.input_text = ""
 
 # クリアボタン処理
-if clear_button:
-    st.session_state["input_area"] = ""
+if st.button("クリア"):
+    st.session_state.input_text = ""
+
+# 入力欄と取得ボタン
+project_ids_input = st.text_area("研究課題番号を入力（改行またはコンマ区切り）", value=st.session_state.input_text, key="input_area")
+if st.button("取得する"):
+    st.session_state.input_text = project_ids_input
+
+    raw_input = project_ids_input
+    split_pattern = r'[\n,]'
+    raw_ids = re.split(split_pattern, raw_input)
+    project_ids = [re.sub(r'^\s*"?|"?\s*$', '', pid.strip()) for pid in raw_ids if pid.strip()]
+
+    appid = st.secrets["KAKEN_APPID"] if "KAKEN_APPID" in st.secrets else "XaVdNh6thZ1gCbDmJ0Hn"
+
+    funder_info = """    <jpcoar:funderIdentifier funderIdentifierType=\"Crossref Funder\" funderIdentifierTypeURI=\"https://www.crossref.org/services/funder-registry/\">\n        https://doi.org/10.13039/501100001691\n    </jpcoar:funderIdentifier>
+    <jpcoar:funderName xml:lang=\"en\">Japan Society for the Promotion of Science (JSPS)</jpcoar:funderName>
+    <jpcoar:funderName xml:lang=\"ja\">日本学術振興会</jpcoar:funderName>
+    <jpcoar:fundingStreamIdentifier fundingStreamIdentifierType=\"\" fundingStreamIdentifierTypeURI=\"\"></jpcoar:fundingStreamIdentifier>
+    <jpcoar:fundingStream xml:lang=\"\"></jpcoar:fundingStream>"""
+
+    all_blocks = ""
+
+    for raw_project_id in project_ids:
+        project_id = raw_project_id.removeprefix("JP")
+        award_number_type = "JGN" if raw_project_id.startswith("JP") else ""
+        url = f"https://kaken.nii.ac.jp/opensearch/?appid={appid}&format=xml&qb={project_id}"
+
+        try:
+            response = requests.get(url)
+            root = ET.fromstring(response.content)
+        except Exception as e:
+            st.warning(f"取得失敗: {raw_project_id} ({e})")
+            continue
+
+        titles = {}
+        award_uri = ""
+
+        grant_award = root.find(".//grantAward")
+        if grant_award is not None:
+            url_elem = grant_award.find(".//urlList/url")
+            if url_elem is not None:
+                award_uri = url_elem.text.strip()
+            for summary in grant_award.findall(".//summary"):
+                lang = summary.attrib.get("{http://www.w3.org/XML/1998/namespace}lang")
+                title_elem = summary.find("title")
+                if title_elem is not None:
+                    titles[lang] = title_elem.text
+
+        if not titles:
+            st.warning(f"研究課題が見つかりませんでした: {raw_project_id}")
+            continue
+
+        title_ja = titles.get("ja", "")
+        title_en = titles.get("en", "")
+
+        xml_block = f"""<jpcoar:fundingReference>
+{funder_info}
+    <jpcoar:awardNumber awardNumberType=\"{award_number_type}\" awardURI=\"{award_uri}\">\n        {raw_project_id}\n    </jpcoar:awardNumber>"""
+        if title_en:
+            xml_block += f"\n    <jpcoar:awardTitle xml:lang=\"en\">{title_en}</jpcoar:awardTitle>"
+        if title_ja:
+            xml_block += f"\n    <jpcoar:awardTitle xml:lang=\"ja\">{title_ja}</jpcoar:awardTitle>"
+        xml_block += "\n</jpcoar:fundingReference>\n"
+
+        all_blocks += xml_block
+
+    if all_blocks:
+        st.code(all_blocks.strip(), language="xml")
