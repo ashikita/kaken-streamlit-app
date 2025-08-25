@@ -5,24 +5,22 @@ import re
 
 st.title("JPCOARスキーマ科研費助成情報取得ツール")
 
-if "project_ids_input" not in st.session_state:
-    st.session_state.project_ids_input = ""
-
-st.text_area("研究課題番号を入力（改行またはコンマ区切り）", key="project_ids_input")
+project_ids_input = st.text_area("研究課題番号を入力（改行またはコンマ区切り）", "", key="input_area")
 
 col1, col2 = st.columns([1, 1])
-with col1:
-    get_button = st.button("取得する")
-with col2:
-    clear_button = st.button("クリア")
+get_button = col1.button("取得する")
+clear_button = col2.button("クリア")
 
 if clear_button:
-    st.session_state.project_ids_input = ""
+    st.markdown("""
+        <script>
+        const textarea = window.parent.document.querySelector('textarea');
+        if (textarea) textarea.value = "";
+        </script>
+    """, unsafe_allow_html=True)
 
-if get_button and st.session_state.project_ids_input.strip():
-    raw_input = st.session_state.project_ids_input
-
-    # 改行またはコンマで分割し、前後の空白・タブ・ダブルクォーテーションを除去
+if get_button and project_ids_input.strip():
+    raw_input = project_ids_input
     split_pattern = r'[\n,]'
     raw_ids = re.split(split_pattern, raw_input)
     project_ids = [re.sub(r'^\s*"?|"?\s*$', '', pid.strip()) for pid in raw_ids if pid.strip()]
@@ -72,7 +70,7 @@ if get_button and st.session_state.project_ids_input.strip():
 
         xml_block = f"""<jpcoar:fundingReference>
 {funder_info}
-    <jpcoar:awardNumber awardNumberType=\"{award_number_type}\" awardURI=\"{award_uri}\">{raw_project_id}</jpcoar:awardNumber>"""
+    <jpcoar:awardNumber awardNumberType=\"{award_number_type}\" awardURI=\"{award_uri}\">\n        {raw_project_id}\n    </jpcoar:awardNumber>"""
         if title_en:
             xml_block += f"\n    <jpcoar:awardTitle xml:lang=\"en\">{title_en}</jpcoar:awardTitle>"
         if title_ja:
