@@ -23,7 +23,11 @@ if st.button("取得する"):
     raw_ids = re.split(split_pattern, raw_input)
     project_ids = [re.sub(r'^\s*"?|"?\s*$', '', pid.strip()) for pid in raw_ids if pid.strip()]
 
-    appid = st.secrets["KAKEN_APPID"] if "KAKEN_APPID" in st.secrets else "XaVdNh6thZ1gCbDmJ0Hn"
+    if "KAKEN_APPID" in st.secrets:
+        appid = st.secrets["KAKEN_APPID"]
+    else:
+        st.error("KAKEN_APPID が設定されていません。StreamlitのSecretsにAPPIDを追加してください。")
+        st.stop()
 
     funder_info = """    <jpcoar:funderIdentifier funderIdentifierType=\"Crossref Funder\" funderIdentifierTypeURI=\"https://www.crossref.org/services/funder-registry/\">\n        https://doi.org/10.13039/501100001691\n    </jpcoar:funderIdentifier>
     <jpcoar:funderName xml:lang=\"en\">Japan Society for the Promotion of Science (JSPS)</jpcoar:funderName>
